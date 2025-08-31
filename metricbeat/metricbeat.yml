@@ -1,0 +1,44 @@
+strict.perms: false
+
+metricbeat.config.modules:
+  path: ${path.config}/modules.d/*.yml
+  reload.enabled: false
+
+setup.kibana:
+  host: https://kibana:5601
+  ssl.certificate_authorities: ["/usr/share/metricbeat/certs/ca.crt"]
+  username: elastic
+  password: ${ELASTIC_PASSWORD}
+
+output.elasticsearch:
+  hosts: ["https://es01:9200"]
+  protocol: https
+  username: elastic
+  password: ${ELASTIC_PASSWORD}
+  ssl.certificate_authorities: ["/usr/share/metricbeat/certs/ca.crt"]
+
+monitoring.enabled: true
+
+processors:
+  - add_host_metadata: ~
+  - add_cloud_metadata: ~
+  - add_docker_metadata: ~
+
+setup.dashboards.enabled: true
+
+modules:
+  - module: elasticsearch
+    xpack.enabled: true
+    period: 10s
+    hosts: ["https://es01:9200","https://es02:9200","https://es03:9200"]
+    username: elastic
+    password: ${ELASTIC_PASSWORD}
+    ssl.certificate_authorities: ["/usr/share/metricbeat/certs/ca.crt"]
+
+  - module: kibana
+    xpack.enabled: true
+    period: 10s
+    hosts: ["https://kibana:5601"]
+    username: elastic
+    password: ${ELASTIC_PASSWORD}
+    ssl.certificate_authorities: ["/usr/share/metricbeat/certs/ca.crt"]
