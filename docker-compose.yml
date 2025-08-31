@@ -1,0 +1,147 @@
+version: "3.8"
+services:
+  es01:
+    image: docker.elastic.co/elasticsearch/elasticsearch:${ELASTIC_VERSION}
+    container_name: es01
+    restart: unless-stopped
+    environment:
+      - node.name=es01
+      - cluster.name=es-lab
+      - discovery.seed_hosts=es01,es02,es03
+      - cluster.initial_master_nodes=es01,es02,es03
+      - node.roles=master,data_hot,data_content,ingest
+      - ES_JAVA_OPTS=${ES_JAVA_OPTS}
+      - bootstrap.memory_lock=true
+      - xpack.security.enabled=true
+      - xpack.security.http.ssl.enabled=true
+      - xpack.security.http.ssl.key=/usr/share/elasticsearch/config/certs/es01.key
+      - xpack.security.http.ssl.certificate=/usr/share/elasticsearch/config/certs/es01.crt
+      - xpack.security.http.ssl.certificate_authorities=/usr/share/elasticsearch/config/certs/ca.crt
+      - xpack.security.transport.ssl.enabled=true
+      - xpack.security.transport.ssl.verification_mode=certificate
+      - xpack.security.transport.ssl.key=/usr/share/elasticsearch/config/certs/es01.key
+      - xpack.security.transport.ssl.certificate=/usr/share/elasticsearch/config/certs/es01.crt
+      - xpack.security.transport.ssl.certificate_authorities=/usr/share/elasticsearch/config/certs/ca.crt
+      - ELASTIC_PASSWORD=${ELASTIC_PASSWORD}
+      - TZ=${TZ}
+    ulimits:
+      memlock:
+        soft: -1
+        hard: -1
+    volumes:
+      - es01-data:/usr/share/elasticsearch/data
+      - ./certs:/usr/share/elasticsearch/config/certs:ro
+    ports:
+      - "9200:9200"
+    networks: [elastic]
+
+  es02:
+    image: docker.elastic.co/elasticsearch/elasticsearch:${ELASTIC_VERSION}
+    container_name: es02
+    restart: unless-stopped
+    environment:
+      - node.name=es02
+      - cluster.name=es-lab
+      - discovery.seed_hosts=es01,es02,es03
+      - cluster.initial_master_nodes=es01,es02,es03
+      - node.roles=master,data_hot,data_content,ingest
+      - ES_JAVA_OPTS=${ES_JAVA_OPTS}
+      - bootstrap.memory_lock=true
+      - xpack.security.enabled=true
+      - xpack.security.http.ssl.enabled=true
+      - xpack.security.http.ssl.key=/usr/share/elasticsearch/config/certs/es02.key
+      - xpack.security.http.ssl.certificate=/usr/share/elasticsearch/config/certs/es02.crt
+      - xpack.security.http.ssl.certificate_authorities=/usr/share/elasticsearch/config/certs/ca.crt
+      - xpack.security.transport.ssl.enabled=true
+      - xpack.security.transport.ssl.verification_mode=certificate
+      - xpack.security.transport.ssl.key=/usr/share/elasticsearch/config/certs/es02.key
+      - xpack.security.transport.ssl.certificate=/usr/share/elasticsearch/config/certs/es02.crt
+      - xpack.security.transport.ssl.certificate_authorities=/usr/share/elasticsearch/config/certs/ca.crt
+      - TZ=${TZ}
+    ulimits:
+      memlock:
+        soft: -1
+        hard: -1
+    volumes:
+      - es02-data:/usr/share/elasticsearch/data
+      - ./certs:/usr/share/elasticsearch/config/certs:ro
+    networks: [elastic]
+
+  es03:
+    image: docker.elastic.co/elasticsearch/elasticsearch:${ELASTIC_VERSION}
+    container_name: es03
+    restart: unless-stopped
+    environment:
+      - node.name=es03
+      - cluster.name=es-lab
+      - discovery.seed_hosts=es01,es02,es03
+      - cluster.initial_master_nodes=es01,es02,es03
+      - node.roles=master,data_cold
+      - ES_JAVA_OPTS=${ES_JAVA_OPTS}
+      - bootstrap.memory_lock=true
+      - xpack.security.enabled=true
+      - xpack.security.http.ssl.enabled=true
+      - xpack.security.http.ssl.key=/usr/share/elasticsearch/config/certs/es03.key
+      - xpack.security.http.ssl.certificate=/usr/share/elasticsearch/config/certs/es03.crt
+      - xpack.security.http.ssl.certificate_authorities=/usr/share/elasticsearch/config/certs/ca.crt
+      - xpack.security.transport.ssl.enabled=true
+      - xpack.security.transport.ssl.verification_mode=certificate
+      - xpack.security.transport.ssl.key=/usr/share/elasticsearch/config/certs/es03.key
+      - xpack.security.transport.ssl.certificate=/usr/share/elasticsearch/config/certs/es03.crt
+      - xpack.security.transport.ssl.certificate_authorities=/usr/share/elasticsearch/config/certs/ca.crt
+      - TZ=${TZ}
+    ulimits:
+      memlock:
+        soft: -1
+        hard: -1
+    volumes:
+      - es03-data:/usr/share/elasticsearch/data
+      - ./certs:/usr/share/elasticsearch/config/certs:ro
+    networks: [elastic]
+
+  kibana:
+    image: docker.elastic.co/kibana/kibana:${ELASTIC_VERSION}
+    container_name: kibana
+    restart: unless-stopped
+    environment:
+      - SERVER_NAME=kibana
+      - ELASTICSEARCH_HOSTS=["https://es01:9200","https://es02:9200","https://es03:9200"]
+      - ELASTICSEARCH_USERNAME=kibana_system
+      - ELASTICSEARCH_PASSWORD=${KIBANA_PASSWORD}
+      - SERVER_SSL_ENABLED=true
+      - SERVER_SSL_KEY=/usr/share/kibana/config/certs/kibana.key
+      - SERVER_SSL_CERTIFICATE=/usr/share/kibana/config/certs/kibana.crt
+      - ELASTICSEARCH_SSL_CERTIFICATEAUTHORITIES=/usr/share/kibana/config/certs/ca.crt
+      - TZ=${TZ}
+    ports:
+      - "5601:5601"
+    volumes:
+      - ./certs:/usr/share/kibana/config/certs:ro
+    depends_on: [es01, es02, es03]
+    networks: [elastic]
+
+  metricbeat:
+    image: docker.elastic.co/beats/metricbeat:${ELASTIC_VERSION}
+    container_name: metricbeat
+    user: root
+    restart: unless-stopped
+    environment:
+      - TZ=${TZ}
+      - ELASTIC_PASSWORD=${ELASTIC_PASSWORD}
+    volumes:
+      - ./metricbeat/metricbeat.yml:/usr/share/metricbeat/metricbeat.yml:ro
+      - ./certs:/usr/share/metricbeat/certs:ro
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+      - /sys/fs/cgroup:/hostfs/sys/fs/cgroup:ro
+      - /proc:/hostfs/proc:ro
+      - /:/hostfs:ro
+    depends_on: [es01, es02, es03, kibana]
+    networks: [elastic]
+
+networks:
+  elastic: {}
+
+volumes:
+  es01-data: {}
+  es02-data: {}
+  es03-data: {}
