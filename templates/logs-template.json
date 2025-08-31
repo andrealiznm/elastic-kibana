@@ -1,0 +1,30 @@
+{
+  "index_patterns": ["logs-synthetic*"],
+  "data_stream": {},
+  "template": {
+    "settings": {
+      "index": {
+        "number_of_shards": 3,
+        "number_of_replicas": 1,
+        "lifecycle": { "name": "logs_policy" },
+        "routing": {
+          "allocation": {
+            "include": {
+              "_tier_preference": "data_hot,data_warm,data_cold"
+            }
+          }
+        }
+      }
+    },
+    "mappings": {
+      "properties": {
+        "@timestamp": { "type": "date" },
+        "host": { "type": "keyword" },
+        "level": { "type": "keyword" },
+        "message": { "type": "text" },
+        "service": { "type": "keyword" }
+      }
+    }
+  },
+  "priority": 500
+}
